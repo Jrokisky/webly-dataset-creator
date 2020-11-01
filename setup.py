@@ -11,9 +11,9 @@ setup(
     scripts=['webly-dataset-creator/webly-dataset-creator.py'],
     description='Helper functions for creating a webly dataset.',
     install_requires=[
-        "jupyterlab",
-        "Pillow",
-        "matplotlib"
+        "flickrapi",
+        "bing-image-downloader",
+        "yandex-images-download"
     ],
 )
 
