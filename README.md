@@ -13,3 +13,8 @@ export FLICKR_API_KEY=
 export FLICKR_API_SECRET=
 export WEBLY_DOWNLOAD_DIR=
 ```
+
+## Usage
+```
+python webly-dataset-creator/webly-dataset-creator.py "SEARCH TERM" NUM_ITMES
+```
