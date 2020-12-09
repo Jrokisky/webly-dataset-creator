@@ -5,6 +5,7 @@ import requests
 import subprocess
 import sys
 import time
+import shutil
 
 import flickrapi
 from bing_image_downloader import downloader
@@ -15,8 +16,11 @@ def main():
     parser = argparse.ArgumentParser(description='download some images')
     parser.add_argument('search_term', help='the query string')
     parser.add_argument('limit', type=int, help='the number of images to download')
+    parser.add_argument('--only_yandex', type=str, default='False')
     args = parser.parse_args()
     search_phrase = args.search_term
+    only_yandex = args.only_yandex
+    only_yandex = False if only_yandex == 'False' else True
     limit = args.limit
 
     if 'FLICKR_API_KEY' in os.environ:
@@ -37,40 +41,40 @@ def main():
         print("Set the WEBLY_DOWNLOAD_DIR")
         sys.exit()
 
-    # Create Flickr folder.
-    flickr_dir = Path(webly_download_dir / 'flickr')
-    if not flickr_dir.exists():
-        flickr_dir.mkdir()
-
-    bing_dir = Path(webly_download_dir / 'bing')
-    if not bing_dir.exists():
-        bing_dir.mkdir()
-
-    bing_search_dir = Path(bing_dir / search_phrase.replace(' ', '_'))
-    if not bing_search_dir.exists():
-        bing_search_dir.mkdir()
-
-    yandex_dir = Path(webly_download_dir / 'yandex')
-    if not yandex_dir.exists():
-        yandex_dir.mkdir()
+    # Create download folder.
+    search_dir = Path(webly_download_dir / search_phrase.replace(' ', '_'))
+    if not search_dir.exists():
+        search_dir.mkdir()
 
 
-    print('Downloading bing images!')
-    downloader.download(search_phrase, limit=limit,  output_dir=str(bing_dir.resolve()), adult_filter_off=True, force_replace=False, timeout=60)
+    if not only_yandex:
+        print('Downloading bing images!')
+        downloader.download(search_phrase, limit=limit, adult_filter_off=True, force_replace=False, timeout=60)
 
-    print('Downloading flickr images!')
-    download_flickr_images(api_key, api_secret, flickr_dir, search_phrase, max_dl=limit)
+        # Move bing files.
+        bing_download_dir = Path(f'./dataset/{search_phrase}')
+        for b in bing_download_dir.iterdir():
+            shutil.move(b, Path(search_dir / b.name))
+
+        if bing_download_dir.exists():
+            bing_download_dir.rmdir()
+
+        if Path('./dataset').exists():
+            Path('./dataset').rmdir()
+
+        print('Downloading flickr images!')
+        download_flickr_images(api_key, api_secret, webly_download_dir, search_phrase, max_dl=limit)
 
     print('Launching yandex script.')
     subprocess.call(['yandex-images-download', 'Chrome', '--keywords', f'"{search_phrase}"',
-        '--limit', f'{limit}', '-o', f'{str(yandex_dir.resolve())}'])
+        '--limit', f'{limit}', '-o', f'{str(webly_download_dir.resolve())}'])
 
-    # Rename yandex folder to remove quotes
-    yandex_search_dir = Path(yandex_dir / f'"{search_phrase}"')
-    _yandex_search_dir = Path(yandex_dir / search_phrase.replace(' ', '_'))
-    yandex_search_dir.rename(_yandex_search_dir)
+    yandex_dir = Path(webly_download_dir / f'"{search_phrase}"')
+    for p in yandex_dir.iterdir():
+        shutil.move(p, Path(search_dir / p.name))
 
-
+    if yandex_dir.exists():
+        yandex_dir.rmdir()
 
 
 def download_flickr_images(api_key, api_secret, flickr_dir, search_text, max_dl=500):
